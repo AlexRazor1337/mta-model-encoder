@@ -45,10 +45,10 @@ getDirectories(argv.res, (err, res) => {
         let files = res.filter(element => fs.lstatSync(path.resolve(__dirname, element)).isFile() && extensions.includes(path.extname(element)))
         spinner.succeed()
         files.forEach(file => {
-            const data = fs.readFileSync(file, 'utf8')
             const key = crypto.createHash('sha256').update(argv.password).digest("hex").toUpperCase();
+            const data = fs.readFileSync(file)
             const encoded = tea.encode(data, key);
-            fs.writeFileSync(file + 'c', encoded, { flag: 'w+' })
+            fs.writeFileSync(file + 'c', encoded, { flag: 'w+', encoding: 'base64' })
         });
     }
 })
