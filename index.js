@@ -4,6 +4,7 @@ const { hideBin } = require('yargs/helpers')
 const fs = require('fs');
 const path = require('path');
 const ora = require('ora');
+const glob = require("glob");
 
 const error = chalk.bold.red;
 
@@ -26,11 +27,22 @@ const argv = yargs(hideBin(process.argv))
 })
 .demandOption(['password'], error("Include password with 6 symbols or more!"))
 .demandOption(['res'], error("Incorrect or no resource folder selected!"))
-.argv
+.argv;
 
-const spinner = ora('Processing resource').start();
+// const spinner = ora('Processing resource').start();
+// spinner.succeed()
 
-setTimeout(() => {
-    spinner.stop()
-    console.log(argv.password, argv.res);
-}, 1000);
+let getDirectories = (src, callback) => {
+    glob(src + '/**/*', callback);
+}
+
+getDirectories(argv.res, (err, res) => {
+    if (err) {
+        console.log('Error', err);
+    //   spinner.fail()
+    } else {
+        res.filter(element => fs.lstatSync(path.resolve(__dirname, element)).isFile()).forEach(name => console.log(name));
+    }
+})
+// fs.readdirSync(argv.res).forEach(name => console.log(name))
+// console.log(argv.password, argv.res);
