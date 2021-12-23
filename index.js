@@ -5,7 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const ora = require('ora');
 const glob = require("glob");
-
+const tea = require('mta-tea');
+const crypto = require('crypto');
 const error = chalk.bold.red;
 
 const argv = yargs(hideBin(process.argv))
@@ -29,20 +30,25 @@ const argv = yargs(hideBin(process.argv))
 .demandOption(['res'], error("Incorrect or no resource folder selected!"))
 .argv;
 
-// const spinner = ora('Processing resource').start();
-// spinner.succeed()
-
 let getDirectories = (src, callback) => {
     glob(src + '/**/*', callback);
 }
 
+const spinner = ora('Processing resource').start();
+
+const extensions = ['.col', '.txd', '.dff']
+
 getDirectories(argv.res, (err, res) => {
     if (err) {
-        console.log('Error', err);
-    //   spinner.fail()
+        spinner.fail('Something went wrong!')
     } else {
-        res.filter(element => fs.lstatSync(path.resolve(__dirname, element)).isFile()).forEach(name => console.log(name));
+        let files = res.filter(element => fs.lstatSync(path.resolve(__dirname, element)).isFile() && extensions.includes(path.extname(element)))
+        spinner.succeed()
+        files.forEach(file => {
+            const data = fs.readFileSync(file, 'utf8')
+            const key = crypto.createHash('sha256').update(argv.password).digest("hex").toUpperCase();
+            const encoded = tea.encode(data, key);
+            fs.writeFileSync(file + 'c', encoded, { flag: 'w+' })
+        });
     }
 })
-// fs.readdirSync(argv.res).forEach(name => console.log(name))
-// console.log(argv.password, argv.res);
