@@ -3,6 +3,7 @@ const yargs = require('yargs/yargs')
 const { hideBin } = require('yargs/helpers')
 const fs = require('fs');
 const path = require('path');
+const ora = require('ora');
 
 const error = chalk.bold.red;
 
@@ -26,3 +27,10 @@ const argv = yargs(hideBin(process.argv))
 .demandOption(['password'], error("Include password with 6 symbols or more!"))
 .demandOption(['res'], error("Incorrect or no resource folder selected!"))
 .argv
+
+const spinner = ora('Processing resource').start();
+
+setTimeout(() => {
+    spinner.stop()
+    console.log(argv.password, argv.res);
+}, 1000);
