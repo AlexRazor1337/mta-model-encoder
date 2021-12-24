@@ -26,6 +26,11 @@ const argv = yargs(hideBin(process.argv))
     coerce: arg =>
     arg && fs.existsSync(path.resolve(__dirname, arg)) && fs.lstatSync(path.resolve(__dirname, arg)).isDirectory() ? arg : undefined
 })
+.options('meta', {
+    alias: 'm',
+    describe: 'Replace file extensions in meta',
+    type: 'boolean'
+})
 .demandOption(['password'], error("Include password with 6 symbols or more!"))
 .demandOption(['res'], error("Incorrect or no resource folder selected!"))
 .argv;
@@ -34,21 +39,35 @@ let getDirectories = (src, callback) => {
     glob(src + '/**/*', callback);
 }
 
-const spinner = ora('Processing resource').start();
-
 const extensions = ['.col', '.txd', '.dff']
 
+let spinner = ora('Getting files list').start();
 getDirectories(argv.res, (err, res) => {
     if (err) {
         spinner.fail('Something went wrong!')
     } else {
         let files = res.filter(element => fs.lstatSync(path.resolve(__dirname, element)).isFile() && extensions.includes(path.extname(element)))
         spinner.succeed()
+
+        spinner = ora('Encoding files').start();
         files.forEach(file => {
             const key = crypto.createHash('sha256').update(argv.password).digest("hex").toUpperCase();
             const data = fs.readFileSync(file)
             const encoded = tea.encode(data, key);
             fs.writeFileSync(file + 'c', encoded, { flag: 'w+', encoding: 'base64' })
         });
+        spinner.succeed()
+
+        if (argv.meta) {
+            spinner = ora('Editing meta.xml').start();
+            const meta = res.filter(element => fs.lstatSync(path.resolve(__dirname, element)).isFile() && element.includes('meta.xml'))[0]
+            let data = fs.readFileSync(meta).toString('utf8')
+            extensions.forEach(extension => {
+                data = data.replace(extension, extension + 'c')
+            });
+
+            fs.writeFileSync(meta, data, { flag: 'w+' })
+            spinner.succeed()
+        }
     }
 })
