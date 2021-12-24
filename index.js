@@ -2,11 +2,13 @@ const chalk = require('chalk');
 const yargs = require('yargs/yargs')
 const { hideBin } = require('yargs/helpers')
 const fs = require('fs');
+const fse = require('fs-extra')
 const path = require('path');
 const ora = require('ora');
 const glob = require("glob");
 const tea = require('mta-tea');
 const crypto = require('crypto');
+
 const error = chalk.bold.red;
 
 const argv = yargs(hideBin(process.argv))
@@ -22,6 +24,13 @@ const argv = yargs(hideBin(process.argv))
 .options('res', {
     alias: 'r',
     describe: 'Resource folder path',
+    type: 'string',
+    coerce: arg =>
+    arg && fs.existsSync(path.resolve(__dirname, arg)) && fs.lstatSync(path.resolve(__dirname, arg)).isDirectory() ? arg : undefined
+})
+.options('backup', {
+    alias: 'b',
+    describe: 'Backup folder for resources',
     type: 'string',
     coerce: arg =>
     arg && fs.existsSync(path.resolve(__dirname, arg)) && fs.lstatSync(path.resolve(__dirname, arg)).isDirectory() ? arg : undefined
@@ -46,6 +55,10 @@ getDirectories(argv.res, (err, res) => {
     if (err) {
         spinner.fail('Something went wrong!')
     } else {
+        if (argv.backup) {
+            fse.copySync(argv.res, argv.backup + path.sep + path.basename(path.resolve(argv.res)) + new Date().getTime())
+        }
+
         let files = res.filter(element => fs.lstatSync(path.resolve(__dirname, element)).isFile() && extensions.includes(path.extname(element)))
         spinner.succeed()
 
