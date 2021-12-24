@@ -40,6 +40,11 @@ const argv = yargs(hideBin(process.argv))
     describe: 'Replace file extensions in meta',
     type: 'boolean'
 })
+.options('del', {
+    alias: 'd',
+    describe: 'Delete original files, works only with the backup flag',
+    type: 'boolean'
+})
 .demandOption(['password'], error("Include password with 6 symbols or more!"))
 .demandOption(['res'], error("Incorrect or no resource folder selected!"))
 .argv;
@@ -55,12 +60,15 @@ getDirectories(argv.res, (err, res) => {
     if (err) {
         spinner.fail('Something went wrong!')
     } else {
-        if (argv.backup) {
-            fse.copySync(argv.res, argv.backup + path.sep + path.basename(path.resolve(argv.res)) + new Date().getTime())
-        }
-
         let files = res.filter(element => fs.lstatSync(path.resolve(__dirname, element)).isFile() && extensions.includes(path.extname(element)))
         spinner.succeed()
+
+        if (argv.backup) {
+            let backupFolder = argv.backup + path.sep + path.basename(path.resolve(argv.res)) + new Date().getTime()
+            spinner = ora('Making backup to \"' + backupFolder + '"').start();
+            fse.copySync(argv.res, backupFolder)
+            spinner.succeed()
+        }
 
         spinner = ora('Encoding files').start();
         files.forEach(file => {
@@ -68,6 +76,10 @@ getDirectories(argv.res, (err, res) => {
             const data = fs.readFileSync(file)
             const encoded = tea.encode(data, key);
             fs.writeFileSync(file + 'c', encoded, { flag: 'w+', encoding: 'base64' })
+
+            if (argv.backup && argv.del) {
+                fse.removeSync(file)
+            }
         });
         spinner.succeed()
 
