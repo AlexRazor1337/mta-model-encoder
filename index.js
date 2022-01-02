@@ -91,15 +91,24 @@ getDirectories(argv.res, (err, res) => {
 
         if (argv.meta) {
             spinner = ora('Editing meta.xml').start();
-            const meta = res.filter(element => fs.lstatSync(path.resolve(__dirname, element)).isFile() && element.includes('meta.xml'))[0]
+            const meta = res.filter(element => fs.existsSync(path.resolve(__dirname, element)) && fs.lstatSync(path.resolve(__dirname, element)).isFile() && element.includes('meta.xml'))[0]
             let metaContent = fs.readFileSync(meta).toString('utf8')
             extensions.forEach(extension => {
                 metaContent = metaContent.replace(extension, extension + 'c')
             });
 
             if (argv.full) {
-                const clientFile = res.filter(element => fs.lstatSync(path.resolve(__dirname, element)).isFile() && element.includes('client.lua'))[0]
-                const data = fs.readFileSync(clientFile).toString('utf8')
+                const clientFile = res.filter(element => fs.existsSync(path.resolve(__dirname, element)) && fs.lstatSync(path.resolve(__dirname, element)).isFile() && element.includes('client.lua'))[0]
+                let data = fs.readFileSync(clientFile).toString('utf8')
+                const funcs = [
+                    ['engineLoadTXD', 'decodeLoadTXD'],
+                    ['engineLoadDFF', 'decodeLoadDFF'],
+                    ['engineLoadCOL', 'decodeLoadCOL'],
+                ]
+
+                funcs.forEach(func => {
+                    data = data.replace(func[0], func[1])
+                });
 
                 fse.removeSync(clientFile);
 
