@@ -28,7 +28,7 @@ const argv = yargs(hideBin(process.argv))
     coerce: arg =>
     arg && fs.existsSync(path.resolve(__dirname, arg)) && fs.lstatSync(path.resolve(__dirname, arg)).isDirectory() ? arg : undefined
 })
-.options('backup', {
+.options('backup', { // TODO create folder if not exists
     alias: 'b',
     describe: 'Backup folder for resources',
     type: 'string',
@@ -43,6 +43,11 @@ const argv = yargs(hideBin(process.argv))
 .options('del', {
     alias: 'd',
     describe: 'Delete original files, works only with the backup flag',
+    type: 'boolean'
+})
+.options('full', {
+    alias: 'f',
+    describe: 'Full build of resource, adds pass setting to the meta and additional lua files',
     type: 'boolean'
 })
 .demandOption(['password'], error("Include password with 6 symbols or more!"))
@@ -80,18 +85,34 @@ getDirectories(argv.res, (err, res) => {
             if (argv.backup && argv.del) {
                 fse.removeSync(file)
             }
+
         });
         spinner.succeed()
 
         if (argv.meta) {
             spinner = ora('Editing meta.xml').start();
             const meta = res.filter(element => fs.lstatSync(path.resolve(__dirname, element)).isFile() && element.includes('meta.xml'))[0]
-            let data = fs.readFileSync(meta).toString('utf8')
+            let metaContent = fs.readFileSync(meta).toString('utf8')
             extensions.forEach(extension => {
-                data = data.replace(extension, extension + 'c')
+                metaContent = metaContent.replace(extension, extension + 'c')
             });
 
-            fs.writeFileSync(meta, data, { flag: 'w+' })
+            if (argv.full) {
+                const clientFile = res.filter(element => fs.lstatSync(path.resolve(__dirname, element)).isFile() && element.includes('client.lua'))[0]
+                const data = fs.readFileSync(clientFile).toString('utf8')
+
+                fse.removeSync(clientFile);
+
+                const decoder = fs.readFileSync('lua/_decoder_client.lua').toString('utf8').replace('--CLIENT CONTENT HERE', data)
+                fs.writeFileSync(path.resolve(__dirname, argv.res + path.sep + '_decoder_client.lua'), decoder, { flag: 'w+' })
+                fse.copyFileSync('lua/_decoder_server.lua', path.resolve(__dirname, argv.res + path.sep + '_decoder_server.lua'))
+
+                metaContent = metaContent.replace(/^.*client.lua.*$/mg, '<script src="_decoder_server.lua" type="server"/><script src="_decoder_client.lua" type="client"/>');
+                metaContent = metaContent.replace('</meta>', '\t<settings>\n\t\t<setting name="pass" value="' + argv.password + '" />\t</settings>\n</meta>')
+            }
+
+
+            fs.writeFileSync(meta, metaContent, { flag: 'w+' })
             spinner.succeed()
         }
     }
