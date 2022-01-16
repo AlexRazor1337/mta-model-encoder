@@ -5,6 +5,11 @@ This script encodes files with tea-encode compatible with MTA:SA. Then replaces 
 
 # Usage
 
+First, install all packets.
+```
+npm install
+```
+
 Run script without any arguments and it will list all options and usage example.
 ```
 node index.js
